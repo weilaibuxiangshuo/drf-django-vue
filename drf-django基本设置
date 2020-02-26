@@ -1,0 +1,294 @@
+views.py
+
+from django.shortcuts import render,HttpResponse
+from django.views.generic import View
+
+# Create your views here.
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from .serializers import BooksSerializer
+from .models import Books
+
+from django.shortcuts import render,HttpResponse
+from django.views.generic import View
+
+# Create your views here.
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from .serializers import BooksSerializer
+from .models import Books
+
+class BooksListView(APIView):
+    """
+    对接第一例子
+    """
+    def get(self,request,format=None):
+        books = Books.objects.all()
+        serializer = BooksSerializer(books,many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        """接收前端发送来的数据 GET POST BODY 方式里面的数据"""
+        serializer = BooksSerializer(data=request.data)
+        if serializer.is_valid():
+            # save会调用serializers.Serializer里create方法
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+"-------------------------------------------------------------"
+
+
+class BooksListView(APIView):
+    """
+    对接第二例子
+    """
+    def get(self,request,format=None):
+        books = Books.objects.all()
+        serializer = BooksSerializer(books,many=True)
+        return Response(serializer.data)
+
+
+"-------------------------------------------------------------"
+
+from rest_framework import mixins
+from rest_framework import generics
+
+class BooksListView(mixins.ListModelMixin,generics.GenericAPIView):
+    """
+    对接第三例子
+    """
+    queryset = Books.objects.all()
+    serializer_class = BooksSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+"-------------------------------------------------------------"
+
+from rest_framework import generics
+from rest_framework.pagination import PageNumberPagination
+class StandardResultsSetPagination(PageNumberPagination):
+    """
+    自定分页，需要把setting中全局REST_FRAMEWORK里rest_framework.pagination.PageNumberPagination关闭掉
+    """
+    page_size = 3
+    page_size_query_param = 'page_size'
+    page_query_param = "p"
+    max_page_size = 100
+
+class BooksListView(generics.ListAPIView):
+    """
+    generics.ListAPIView对第三例子继承的封装，等于第三例子，可以看generics.ListAPIView代码
+    功能比较完善，图片地址都会自动加上http://127.0.0.1:8000
+    对接第四例子
+    """
+    queryset = Books.objects.all()
+    serializer_class = BooksSerializer
+    pagination_class = StandardResultsSetPagination
+
+"-------------------------------------------------------------"
+from rest_framework import viewsets,mixins
+
+
+from rest_framework.pagination import PageNumberPagination
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 3
+    page_size_query_param = 'page_size'
+    page_query_param = "p"
+    max_page_size = 100
+
+class BooksListViewSet(mixins.ListModelMixin,viewsets.GenericViewSet):
+    """
+    对接第五例子
+    """
+    queryset = Books.objects.all()
+    serializer_class = BooksSerializer
+    pagination_class = StandardResultsSetPagination
+
+
+"""
+GenericViewSet(viewsets)   -drf
+    GenericAPIView         -drf
+        APIView            -drf
+            View           -django
+            
+mixin
+    CreateModelMixin
+    ListModelMixin
+    RetrieveModelMixin
+    UpdateModelMixin
+    DestroyModelMixin
+"""
+
+"-------------------------------------------------------------"
+from rest_framework import viewsets,mixins
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+class BooksResultsSetPagination(PageNumberPagination):
+    page_size = 3
+    page_size_query_param = 'page_size'
+    page_query_param = "p"
+    max_page_size = 100
+
+class BooksListViewSet(mixins.ListModelMixin,viewsets.GenericViewSet):
+    """
+    对接第六例子
+    过滤
+    """
+    queryset = Books.objects.all()
+    serializer_class = BooksSerializer
+    pagination_class = BooksResultsSetPagination
+
+    # def get_queryset(self):
+    #     queryset = Books.objects.all()
+    #     num = self.request.query_params.get("num",0)
+    #     print(num,"num")
+    #     print(type(num),"num")
+    #     if num:
+    #         queryset = queryset.filter(id__gt=int(num))
+    #     return queryset
+    #添加过滤
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter]
+    # 下面用的是drf里面的filters
+    # filter_fields = ['name', ]
+    #下面用的是django-filter
+    from .filters import BooksFilter
+    filterset_class = BooksFilter
+    #下面用的是drf里面的filters
+    search_fields = ['name']
+
+************************************************************************
+
+serializer.py
+
+#  -*- coding:utf-8 -*-
+
+
+from rest_framework import serializers
+from .models import Books,Author
+
+class BooksSerializer(serializers.Serializer):
+    """
+    对接第一例子
+    """
+    name = serializers.CharField(max_length=100,required=True)
+    desc = serializers.CharField(max_length=100,required=True)
+    # 可以向数据库添加信息
+    def create(self, validated_data):
+        return Books.objects.create(**validated_data)
+
+"-------------------------------------------------------------"
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = "__all__"
+
+class BooksSerializer(serializers.ModelSerializer):
+    """
+    对接第二例子
+    """
+    author = AuthorSerializer()
+    class Meta:
+        model = Books
+        # fields = ['id', 'name']
+        fields = "__all__"
+
+"-------------------------------------------------------------"
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = "__all__"
+
+class BooksSerializer(serializers.ModelSerializer):
+    """
+    对接第三例子
+    """
+    author = AuthorSerializer()
+    class Meta:
+        model = Books
+        # fields = ['id', 'name']
+        fields = "__all__"
+
+
+"-------------------------------------------------------------"
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = "__all__"
+
+class BooksSerializer(serializers.ModelSerializer):
+    """
+    对接第四例子
+    """
+    author = AuthorSerializer()
+    class Meta:
+        model = Books
+        # fields = ['id', 'name']
+        fields = "__all__"
+
+
+"-------------------------------------------------------------"
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = "__all__"
+
+class BooksSerializer(serializers.ModelSerializer):
+    """
+    对接第五例子
+    """
+    author = AuthorSerializer()
+    class Meta:
+        model = Books
+        # fields = ['id', 'name']
+        fields = "__all__"
+
+
+"-------------------------------------------------------------"
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = "__all__"
+
+class BooksSerializer(serializers.ModelSerializer):
+    """
+    对接第六例子
+    """
+    author = AuthorSerializer()
+    class Meta:
+        model = Books
+        # fields = ['id', 'name']
+        fields = "__all__"
+        
+************************************************************************
+
+filters.py
+
+
+from django_filters import rest_framework as filters
+from .models import Books
+
+class BooksFilter(filters.FilterSet):
+    min_id  = filters.NumberFilter(field_name="id", lookup_expr='gt')
+    max_id  = filters.NumberFilter(field_name="id", lookup_expr='lt')
+    name = filters.CharFilter(field_name="name", lookup_expr='icontains')
+
+    class Meta:
+        model = Books
+        fields = ['min_id','max_id','name']
+      
