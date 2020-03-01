@@ -1,0 +1,17 @@
+1.继承viewsets.ModelViewSet如何批量，需要使用到@action，并且需要设定detail=False
+前端直接使用params拼接参数传递值,后端通过request.query_params.get获取
+注意：必须直接返回Response否则会报错
+
+2.例子如下：
+class RolesViewSet(viewsets.ModelViewSet):
+
+    @action(methods=['delete'],detail=False)
+    def many_delete(self, request, *args, **kwargs):
+        delete_id = request.query_params.get("pk",None)
+        from rest_framework.generics import get_object_or_404
+        if not delete_id:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        for i in json.loads(delete_id):
+            get_object_or_404(Roles, pk=int(i)).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
