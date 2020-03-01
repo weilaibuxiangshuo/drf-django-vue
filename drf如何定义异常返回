@@ -1,0 +1,23 @@
+在setting中设定，app名+文件名+类名
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'apps.utils.exceptionHandler.custom_exception_handler'
+}
+
+新建文件：exceptionHandler.py
+
+文件中定义类为：
+from rest_framework.views import exception_handler
+from rest_framework.response import Response
+
+def custom_exception_handler(exc, context):
+    # 先调用REST framework默认的异常处理方法获得标准错误响应对象
+    response = exception_handler(exc, context)
+    # 在此处补充自定义的异常处理
+    # 必须返回response.data,因为里面包含有定义的错误信息和状态码，如果直接返回response只有状态码
+    if response is not None:
+        response.data['status_code'] = response.status_code
+        # 返回错误信息与状态
+        return Response(response.data)
+    else:
+        return response
